@@ -1,4 +1,4 @@
-package bloxlink
+package rover
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 )
 
 type (
-	BloxlinkIntegration struct {
+	RoverIntegration struct {
 		redis  *redis.Client
 		proxy  *webproxy.WebProxy
 		apiKey string
@@ -23,8 +23,8 @@ type (
 	}
 )
 
-func NewBloxlinkIntegration(redis *redis.Client, proxy *webproxy.WebProxy, apiKey string) *BloxlinkIntegration {
-	return &BloxlinkIntegration{
+func NewRoverIntegration(redis *redis.Client, proxy *webproxy.WebProxy, apiKey string) *RoverIntegration {
+	return &RoverIntegration{
 		redis:  redis,
 		proxy:  proxy,
 		apiKey: apiKey,
@@ -45,8 +45,8 @@ func newNullUser() cachedUser {
 
 const cacheLength = time.Hour * 24
 
-func (i *BloxlinkIntegration) GetRobloxUser(ctx context.Context, discordUserId uint64) (roblox.User, error) {
-	redisKey := fmt.Sprintf("bloxlink:%d", discordUserId)
+func (i *RoverIntegration) GetRobloxUser(ctx context.Context, guildId, discordUserId uint64) (roblox.User, error) {
+	redisKey := fmt.Sprintf("rover:%d", discordUserId)
 
 	// See if we have a cached value
 	cached, err := i.redis.Get(ctx, redisKey).Result()
@@ -66,7 +66,7 @@ func (i *BloxlinkIntegration) GetRobloxUser(ctx context.Context, discordUserId u
 	}
 
 	// Fetch user ID from Bloxlink
-	robloxId, err := RequestUserId(ctx, i.proxy, i.apiKey, discordUserId)
+	robloxId, err := RequestUserId(ctx, i.proxy, i.apiKey, guildId, discordUserId)
 	if err != nil {
 		if err == ErrUserNotFound { // If user not found, we should still cache this
 			encoded, err := json.Marshal(newNullUser())
