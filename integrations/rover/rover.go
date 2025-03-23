@@ -25,7 +25,7 @@ var (
 )
 
 func RequestUserId(ctx context.Context, proxy *webproxy.WebProxy, roverApiKey string, guildId uint64, userId uint64) (int, error) {
-	url := fmt.Sprintf("https://registry.rover.link/api/%d/discord-to-roblox/%d", guildId, userId)
+	url := fmt.Sprintf("https://registry.rover.link/api/guilds/%d/discord-to-roblox/%d", guildId, userId)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return 0, err
