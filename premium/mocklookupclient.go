@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/TicketsBot-cloud/common/model"
-	"github.com/rxdn/gdl/objects/guild"
-	"github.com/rxdn/gdl/rest/ratelimit"
+	"github.com/TicketsBot-cloud/gdl/objects/guild"
+	"github.com/TicketsBot-cloud/gdl/rest/ratelimit"
 )
 
 type MockLookupClient struct {

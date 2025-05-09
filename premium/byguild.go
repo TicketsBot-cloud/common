@@ -6,7 +6,7 @@ import (
 
 	"github.com/TicketsBot-cloud/common/model"
 	"github.com/TicketsBot-cloud/common/sentry"
-	"github.com/rxdn/gdl/objects/guild"
+	"github.com/TicketsBot-cloud/gdl/objects/guild"
 )
 
 const GracePeriod = time.Hour // TODO: Reduce this to zero?

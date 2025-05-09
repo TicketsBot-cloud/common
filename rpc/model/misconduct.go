@@ -1,6 +1,6 @@
 package model
 
-import "github.com/rxdn/gdl/objects/guild"
+import "github.com/TicketsBot-cloud/gdl/objects/guild"
 
 type MisconductAlert struct {
 	Guild      *guild.Guild   `json:"guild"`

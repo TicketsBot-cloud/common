@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/go-redis/redis/v8"
-	"github.com/rxdn/gdl/objects/guild"
-	"github.com/rxdn/gdl/rest"
-	"github.com/rxdn/gdl/rest/ratelimit"
 	"time"
+
+	"github.com/TicketsBot-cloud/gdl/objects/guild"
+	"github.com/TicketsBot-cloud/gdl/rest"
+	"github.com/TicketsBot-cloud/gdl/rest/ratelimit"
+	"github.com/go-redis/redis/v8"
 )
 
 const (

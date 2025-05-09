@@ -6,8 +6,8 @@ import (
 
 	"github.com/TicketsBot-cloud/common/utils"
 	"github.com/TicketsBot-cloud/database"
+	"github.com/TicketsBot-cloud/gdl/objects/channel/message"
 	"github.com/go-redis/redis/v8"
-	"github.com/rxdn/gdl/objects/channel/message"
 )
 
 type MessageData struct {

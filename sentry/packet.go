@@ -1,11 +1,12 @@
 package sentry
 
 import (
-	"github.com/getsentry/sentry-go"
-	wrapper "github.com/go-errors/errors"
-	"github.com/rxdn/gdl/rest/request"
 	"os"
 	"time"
+
+	"github.com/TicketsBot-cloud/gdl/rest/request"
+	"github.com/getsentry/sentry-go"
+	wrapper "github.com/go-errors/errors"
 )
 
 func constructErrorPacket(e error, tags map[string]string) *sentry.Event {

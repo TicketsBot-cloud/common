@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/TicketsBot-cloud/database"
-	"github.com/rxdn/gdl/objects/member"
-	"github.com/rxdn/gdl/permission"
+	"github.com/TicketsBot-cloud/gdl/objects/member"
+	"github.com/TicketsBot-cloud/gdl/permission"
 )
 
 type Retriever interface {

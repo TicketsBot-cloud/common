@@ -6,11 +6,11 @@ import (
 
 	"github.com/TicketsBot-cloud/common/model"
 	"github.com/TicketsBot-cloud/common/sentry"
+	"github.com/TicketsBot-cloud/gdl/cache"
+	"github.com/TicketsBot-cloud/gdl/objects/guild"
+	"github.com/TicketsBot-cloud/gdl/rest"
+	"github.com/TicketsBot-cloud/gdl/rest/ratelimit"
 	"github.com/go-redis/redis/v8"
-	"github.com/rxdn/gdl/cache"
-	"github.com/rxdn/gdl/objects/guild"
-	"github.com/rxdn/gdl/rest"
-	"github.com/rxdn/gdl/rest/ratelimit"
 )
 
 func (p *PremiumLookupClient) GetTierByGuildId(ctx context.Context, guildId uint64, includeVoting bool, botToken string, ratelimiter *ratelimit.Ratelimiter) (PremiumTier, error) {

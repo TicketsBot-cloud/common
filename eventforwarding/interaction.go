@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	"github.com/TicketsBot-cloud/gdl/objects/interaction"
 	"github.com/go-redis/redis/v8"
-	"github.com/rxdn/gdl/objects/interaction"
 )
 
 type Interaction struct {

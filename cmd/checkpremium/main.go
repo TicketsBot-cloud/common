@@ -8,9 +8,9 @@ import (
 
 	"github.com/TicketsBot-cloud/common/premium"
 	"github.com/TicketsBot-cloud/database"
+	"github.com/TicketsBot-cloud/gdl/cache"
 	"github.com/go-redis/redis/v8"
 	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/rxdn/gdl/cache"
 )
 
 var guildId = flag.Uint64("guildid", 0, "guild id to check")
