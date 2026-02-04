@@ -6,7 +6,6 @@ import (
 
 	"github.com/TicketsBot-cloud/gdl/rest/request"
 	"github.com/getsentry/sentry-go"
-	wrapper "github.com/go-errors/errors"
 )
 
 func constructErrorPacket(e error, tags map[string]string) *sentry.Event {
@@ -19,9 +18,7 @@ func constructPacket(e error, level sentry.Level, tags map[string]string) *sentr
 		hostname = "null"
 	}
 
-	extra := map[string]interface{}{
-		"stack": wrapper.New(e).ErrorStack(),
-	}
+	extra := map[string]interface{}{}
 
 	if restError, ok := e.(request.RestError); ok {
 		extra["status_code"] = restError.StatusCode
@@ -30,13 +27,26 @@ func constructPacket(e error, level sentry.Level, tags map[string]string) *sentr
 		extra["raw"] = string(restError.Raw)
 	}
 
+	// Skip 4 frames: runtime.Callers, NewStacktrace, constructPacket, constructErrorPacket/Error/ErrorWithContext
+	stacktrace := sentry.NewStacktrace()
+	if stacktrace != nil && len(stacktrace.Frames) > 4 {
+		stacktrace.Frames = stacktrace.Frames[:len(stacktrace.Frames)-4]
+	}
+
 	return &sentry.Event{
-		Message:    e.Error(),
-		Extra:      extra,
-		Timestamp:  time.Now(),
-		Level:      level,
+		Message:   e.Error(),
+		Extra:     extra,
+		Timestamp: time.Now(),
+		Level:     level,
 		ServerName: hostname,
-		Tags:       tags,
+		Tags:      tags,
+		Exception: []sentry.Exception{
+			{
+				Type:       e.Error(),
+				Value:      e.Error(),
+				Stacktrace: stacktrace,
+			},
+		},
 	}
 }
 
