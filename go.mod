@@ -10,7 +10,6 @@ require (
 	github.com/TicketsBot-cloud/database v0.0.0-20251018211325-3d2b9b4ad642
 	github.com/TicketsBot-cloud/gdl v0.0.0-20250509054940-2045fbe19c06
 	github.com/getsentry/sentry-go v0.21.0
-	github.com/go-errors/errors v1.4.2
 	github.com/go-redis/redis/v8 v8.11.3
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v4 v4.18.3
