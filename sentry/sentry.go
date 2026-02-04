@@ -1,6 +1,8 @@
 package sentry
 
 import (
+	"time"
+
 	"github.com/TicketsBot-cloud/common/utils"
 	"github.com/getsentry/sentry-go"
 	"github.com/sirupsen/logrus"
@@ -20,6 +22,13 @@ func Initialise(options Options) (err error) {
 	}
 
 	return
+}
+
+// Flush waits until the underlying transport sends any buffered events to the
+// Sentry server, blocking for at most the given timeout. It returns false if
+// the timeout was reached. Call this before program termination to avoid losing events.
+func Flush(timeout time.Duration) bool {
+	return sentry.Flush(timeout)
 }
 
 // log raw error
