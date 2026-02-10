@@ -29,28 +29,25 @@ func ZapSentryAdapter(environment Environment) func(core zapcore.Core) zapcore.C
 					exceptionType = "error"
 				}
 
-				// Capture a proper stack trace from the call site.
-				// Skip 3 frames: runtime.Callers, NewStacktrace, this hook function.
-				stacktrace := sentry.NewStacktrace()
-				if stacktrace != nil && len(stacktrace.Frames) > 3 {
-					stacktrace.Frames = stacktrace.Frames[:len(stacktrace.Frames)-3]
+				extra := map[string]any{
+					"caller": entry.Caller.String(),
+				}
+				if entry.Stack != "" {
+					extra["stack"] = entry.Stack
 				}
 
 				sentry.CaptureEvent(&sentry.Event{
 					Environment: environment.String(),
-					Extra: map[string]any{
-						"caller": entry.Caller.String(),
-					},
-					Level:      sentry.LevelError,
-					Message:    entry.Message,
-					ServerName: hostname,
-					Timestamp:  entry.Time,
-					Logger:     entry.LoggerName,
+					Extra:       extra,
+					Level:       sentry.LevelError,
+					Message:     entry.Message,
+					ServerName:  hostname,
+					Timestamp:   entry.Time,
+					Logger:      entry.LoggerName,
 					Exception: []sentry.Exception{
 						{
-							Type:       exceptionType,
-							Value:      entry.Message,
-							Stacktrace: stacktrace,
+							Type:  exceptionType,
+							Value: entry.Message,
 						},
 					},
 				})
