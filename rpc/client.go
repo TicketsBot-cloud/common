@@ -5,6 +5,7 @@ import (
 
 	"github.com/TicketsBot-cloud/common/utils"
 	"github.com/twmb/franz-go/pkg/kgo"
+	"github.com/twmb/franz-go/pkg/kversion"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 )
@@ -55,5 +56,9 @@ func connectKafka(brokers []string, consumerGroup string, topics []string) (*kgo
 		kgo.ConsumerGroup(consumerGroup),
 		kgo.ConsumeTopics(topics...),
 		kgo.ConsumeResetOffset(kgo.NewOffset().AtEnd()),
+		// franz-go v1.18 probes up to Kafka 3.8 API versions (incl. METADATA v13).
+		// Broker is pinned at Kafka 3.7.2 and closes sockets on v13. Cap at V3_7_0
+		// so every consumer built from this client stays within the broker's surface.
+		kgo.MaxVersions(kversion.V3_7_0()),
 	)
 }

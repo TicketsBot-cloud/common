@@ -13,6 +13,11 @@ type TicketClose struct {
 	TicketId int    `json:"ticket_id"`
 	UserId   uint64 `json:"user_id"`
 	Reason   string `json:"reason"`
+	// CausationId propagates a workflow-run causation when the close is triggered
+	// by an automation. Empty for user/dashboard-initiated closes. The worker's
+	// close listener stamps this onto the synthetic worker.Context so downstream
+	// trigger emissions carry it forward, letting the recursion guard catch loops.
+	CausationId string `json:"causation_id,omitempty"`
 }
 
 const key = "tickets:close"

@@ -22,6 +22,7 @@ const (
 	EntitlementSourcePatreon EntitlementSource = "patreon"
 	EntitlementSourceVoting  EntitlementSource = "voting"
 	EntitlementSourceKey     EntitlementSource = "key"
+	EntitlementSourcePolar   EntitlementSource = "polar"
 )
 
 type EntitlementTier string
