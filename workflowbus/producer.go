@@ -22,7 +22,7 @@ type Producer struct {
 }
 
 // NewProducer returns a Producer. If brokers is empty the returned Producer is a
-// no-op — safe to call Emit on, but nothing is actually sent. This lets local
+// no-op - safe to call Emit on, but nothing is actually sent. This lets local
 // development and tests run without Kafka configured.
 //
 // Pass signer=nil (or a Signer built from an empty secret) to skip HMAC signing;
@@ -58,11 +58,11 @@ func (p *Producer) Close() {
 }
 
 // Emit sends a trigger event. Never blocks the caller on network I/O; errors are logged.
-// causationId is optional — pass "" to have one generated.
+// causationId is optional - pass "" to have one generated.
 //
 // The caller's ctx is intentionally NOT forwarded to the Kafka Produce call. Emit
 // is fire-and-forget from the Discord handler's point of view, and the handler's
-// context is typically cancelled the moment the interaction finishes responding —
+// context is typically cancelled the moment the interaction finishes responding -
 // which can happen before the producer's linger window (10ms) flushes. Propagating
 // that cancellation into Produce would kill the in-flight record with "context
 // canceled". Instead we use a bounded background context so the producer gets a
@@ -94,7 +94,7 @@ func (p *Producer) Emit(_ context.Context, triggerType string, guildId uint64, c
 	}
 
 	// Sign before marshal so the signature lands in the on-wire JSON. No-op if
-	// the signer is inactive (secret unset) — envelope goes out unsigned, which
+	// the signer is inactive (secret unset) - envelope goes out unsigned, which
 	// the executor will accept unless running in strict mode.
 	if err := p.signer.Sign(&env); err != nil {
 		if p.logger != nil {
@@ -149,7 +149,7 @@ func SetGlobal(p *Producer) {
 }
 
 // Emit sends a trigger event via the global Producer (if one has been registered).
-// If no producer is registered, Emit is a silent no-op — callers from Discord event
+// If no producer is registered, Emit is a silent no-op - callers from Discord event
 // handlers can therefore invoke this unconditionally without guarding for startup ordering.
 func Emit(ctx context.Context, triggerType string, guildId uint64, causationId string, payload any) {
 	globalMu.RLock()

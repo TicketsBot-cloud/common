@@ -17,7 +17,7 @@ const SecretEnvVar = "WORKFLOWBUS_HMAC_SECRET"
 
 // ErrInvalidSignature is returned by Verify when the envelope's signature
 // doesn't match the re-computed HMAC. Consumers typically drop the envelope
-// and log when this happens — never execute.
+// and log when this happens - never execute.
 var ErrInvalidSignature = errors.New("workflowbus: envelope signature invalid")
 
 // ErrMissingSignature is returned when a signer is configured but the envelope
@@ -26,7 +26,7 @@ var ErrInvalidSignature = errors.New("workflowbus: envelope signature invalid")
 var ErrMissingSignature = errors.New("workflowbus: envelope missing signature")
 
 // Signer signs and verifies envelopes with HMAC-SHA256. Nil-safe: a Signer
-// created with an empty secret acts as a no-op — Sign leaves Signature empty
+// created with an empty secret acts as a no-op - Sign leaves Signature empty
 // and Verify accepts any envelope. Services read the secret from SecretEnvVar
 // and construct a Signer once at startup.
 type Signer struct {
@@ -35,13 +35,13 @@ type Signer struct {
 
 // NewSigner returns a Signer for the given secret. If secret is empty the
 // returned Signer is a pass-through: Sign does nothing, Verify accepts all.
-// This is the safe default during gradual rollout — add the secret to one side
+// This is the safe default during gradual rollout - add the secret to one side
 // at a time, then flip the strict flag once both sides have it.
 func NewSigner(secret []byte) *Signer {
 	if len(secret) == 0 {
 		return &Signer{}
 	}
-	// Defensive copy — callers may reuse the backing slice.
+	// Defensive copy - callers may reuse the backing slice.
 	s := make([]byte, len(secret))
 	copy(s, secret)
 	return &Signer{secret: s}
@@ -72,7 +72,7 @@ func (s *Signer) Sign(env *Envelope) error {
 //   - the envelope's signature matches the computed HMAC.
 //
 // When strictOnMissing is true, envelopes with an empty Signature are rejected
-// with ErrMissingSignature — use this after the rollout is complete to lock
+// with ErrMissingSignature - use this after the rollout is complete to lock
 // out unsigned traffic entirely.
 func (s *Signer) Verify(env *Envelope, strictOnMissing bool) error {
 	if !s.Active() {
@@ -100,7 +100,7 @@ func (s *Signer) Verify(env *Envelope, strictOnMissing bool) error {
 
 // compute serialises the envelope with Signature empty and HMACs the result.
 // The empty-Signature canonicalisation means the signed blob and the
-// to-be-signed blob agree byte-for-byte — without this, Sign on an already-
+// to-be-signed blob agree byte-for-byte - without this, Sign on an already-
 // signed envelope would be ambiguous.
 func (s *Signer) compute(env *Envelope) ([]byte, error) {
 	clone := *env

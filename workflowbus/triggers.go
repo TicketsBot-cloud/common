@@ -26,7 +26,7 @@ const (
 // envelope with Signature field empty, marshalled deterministically). It's
 // populated by the Signer and verified by the executor when a shared secret is
 // configured. When the secret is unset on both sides, Signature stays empty and
-// is ignored — preserves backward compatibility during rollout.
+// is ignored - preserves backward compatibility during rollout.
 type Envelope struct {
 	Version     int             `json:"version"`
 	TriggerType string          `json:"trigger_type"`
