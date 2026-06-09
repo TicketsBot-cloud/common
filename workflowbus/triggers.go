@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	TopicWorkflowTriggers = "tickets.rpc.workflows"
+	TopicWorkflowTriggers = "stream:rpc:workflows"
 
 	TriggerTicketCreated     = "ticket.created"
 	TriggerTicketClaimed     = "ticket.claimed"
