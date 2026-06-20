@@ -15,7 +15,6 @@ require (
 	github.com/jackc/pgx/v4 v4.18.3
 	github.com/klauspost/compress v1.17.8
 	github.com/panjf2000/ants/v2 v2.10.0
-	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.2
 	go.uber.org/atomic v1.6.0
