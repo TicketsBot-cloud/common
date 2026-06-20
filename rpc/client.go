@@ -2,16 +2,17 @@ package rpc
 
 import (
 	"context"
+	"fmt"
+	"os"
 
-	"github.com/TicketsBot-cloud/common/utils"
-	"github.com/twmb/franz-go/pkg/kgo"
+	"github.com/go-redis/redis/v8"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 )
 
 type Client struct {
 	config Config
-	client *kgo.Client
+	redis  *redis.Client
 	logger *zap.Logger
 
 	consumerRunning *atomic.Bool
@@ -21,20 +22,30 @@ type Client struct {
 }
 
 type Config struct {
-	Brokers             []string
+	Redis               *redis.Client
 	ConsumerGroup       string
+	ConsumerName        string
 	ConsumerConcurrency int
+	MaxLen              int64
 }
 
 func NewClient(logger *zap.Logger, config Config, listeners map[string]Listener) (*Client, error) {
-	kafkaClient, err := connectKafka(config.Brokers, config.ConsumerGroup, utils.Keys(listeners))
-	if err != nil {
-		return nil, err
+	if config.ConsumerName == "" {
+		hostname, _ := os.Hostname()
+		config.ConsumerName = hostname
+	}
+
+	ctx := context.Background()
+	for stream := range listeners {
+		err := config.Redis.XGroupCreateMkStream(ctx, stream, config.ConsumerGroup, "$").Err()
+		if err != nil && err.Error() != "BUSYGROUP Consumer Group name already exists" {
+			return nil, fmt.Errorf("create consumer group for stream %s: %w", stream, err)
+		}
 	}
 
 	return &Client{
 		config:          config,
-		client:          kafkaClient,
+		redis:           config.Redis,
 		logger:          logger,
 		consumerRunning: atomic.NewBool(false),
 		listeners:       listeners,
@@ -42,18 +53,7 @@ func NewClient(logger *zap.Logger, config Config, listeners map[string]Listener)
 }
 
 func (c *Client) Shutdown() {
-	c.client.Close()
-
 	if c.cancelFunc != nil {
 		c.cancelFunc()
 	}
-}
-
-func connectKafka(brokers []string, consumerGroup string, topics []string) (*kgo.Client, error) {
-	return kgo.NewClient(
-		kgo.SeedBrokers(brokers...),
-		kgo.ConsumerGroup(consumerGroup),
-		kgo.ConsumeTopics(topics...),
-		kgo.ConsumeResetOffset(kgo.NewOffset().AtEnd()),
-	)
 }
