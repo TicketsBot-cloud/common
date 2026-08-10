@@ -90,6 +90,15 @@ func (a Attributes) WithGuildSize(size int) Attributes {
 	return a
 }
 
+// WithGuild attaches a guild ID as a targeting attribute without changing the
+// bucketing unit. Use this when the primary unit is something else (e.g. a
+// dashboard user) but guild-targeted rules ("Specific servers", "Percentage of
+// servers" bucketed on guild) still need to match.
+func (a Attributes) WithGuild(guildId uint64) Attributes {
+	a.guildId = guildId
+	return a
+}
+
 // WithStaffTier marks the evaluation as being for a member of bot staff, so flags
 // can be dogfooded internally before any customer sees them. Expects one of
 // "helper", "admin" or "owner"; an empty string is treated as not staff.

@@ -190,6 +190,20 @@ func TestAttributesStaffTier(t *testing.T) {
 	require.NotContains(t, ForDashboardUser(1).WithStaffTier("").toGrowthBook(), AttrStaffTier)
 }
 
+// WithGuild lets a dashboard-user evaluation carry a guild ID, so "Specific
+// servers" and "Percentage of servers" rules can match on a dashboard flag. It
+// must not change which attribute is the bucketing unit.
+func TestAttributesWithGuildOnDashboardUser(t *testing.T) {
+	attrs := ForDashboardUser(30).WithGuild(10).toGrowthBook()
+
+	require.Equal(t, "30", attrs[AttrDashboardUser])
+	require.Equal(t, "10", attrs[AttrGuild])
+
+	// The bucketing fallback must still mirror the primary unit, not the guild
+	// that was merely attached for targeting.
+	require.Equal(t, "30", attrs["id"])
+}
+
 // Staff targeting is the one attribute a caller must remember to supply. Prove a
 // staff rule does not match when it is absent, since a silent non-match is the
 // failure mode.
