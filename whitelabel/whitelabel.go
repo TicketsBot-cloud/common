@@ -2,11 +2,68 @@ package whitelabel
 
 import (
 	"context"
+	"errors"
 
 	"github.com/TicketsBot-cloud/database"
 	"github.com/TicketsBot-cloud/gdl/objects/application"
 	"github.com/TicketsBot-cloud/gdl/rest"
+	"github.com/TicketsBot-cloud/gdl/rest/request"
 )
+
+// Discord only accepts the three "limited" intent flags on PATCH /applications/@me. The
+// non-limited counterparts are granted by intents review, and asking to turn a limited bit
+// on for an application that is already approved (or is over the exposure threshold) is
+// rejected with APPLICATION_MAX_INTENTS_EXPOSURE_REACHED.
+const writableFlags = application.FlagIntentGatewayPresenceLimited |
+	application.FlagIntentGatewayGuildMembersLimited |
+	application.FlagGatewayMessageContentLimited
+
+const invalidFormBodyCode = 50035
+
+const intentsExposureErrorCode = "APPLICATION_MAX_INTENTS_EXPOSURE_REACHED"
+
+const IntentsRejectedMessage = "Discord refused to enable the Server Members and Message " +
+	"Content intents for your bot: the application is exposed to too many users and must be " +
+	"reviewed for privileged intents first. Apply for them in the Discord Developer Portal, " +
+	"then try again."
+
+// DesiredIntentFlags returns the flags value to send for an application whose flags are
+// currently current, or nil if current already grants the intents the bot needs and the
+// field should be omitted from the request.
+func DesiredIntentFlags(current application.Flag) *application.Flag {
+	desired := current & writableFlags
+
+	if !current.Has(application.FlagIntentGatewayGuildMembers) {
+		desired |= application.FlagIntentGatewayGuildMembersLimited
+	}
+
+	if !current.Has(application.FlagGatewayMessageContent) {
+		desired |= application.FlagGatewayMessageContentLimited
+	}
+
+	if desired == current&writableFlags {
+		return nil
+	}
+
+	return &desired
+}
+
+// IsIntentsRejection reports whether err is Discord refusing to enable a privileged intent
+// because the application is exposed to too many users and has not been reviewed.
+func IsIntentsRejection(err error) bool {
+	var restError request.RestError
+	if !errors.As(err, &restError) || restError.ApiError.Code != invalidFormBodyCode {
+		return false
+	}
+
+	for _, fieldError := range restError.ApiError.Errors {
+		if code, ok := fieldError.Code.(string); ok && code == intentsExposureErrorCode {
+			return true
+		}
+	}
+
+	return false
+}
 
 // ReapplyIntents reapplies the gateway intents to the whitelabel application, without
 // touching the interactions endpoint URL. Used when resyncing a bot that is already set up.
@@ -21,14 +78,13 @@ func ReapplyIntents(ctx context.Context, token string) error {
 		currentFlags = *app.Flags
 	}
 
-	flags := application.BuildFlags(
-		currentFlags,
-		application.FlagIntentGatewayGuildMembersLimited,
-		application.FlagGatewayMessageContentLimited,
-	)
+	flags := DesiredIntentFlags(currentFlags)
+	if flags == nil {
+		return nil
+	}
 
 	_, err = rest.EditCurrentApplication(ctx, token, nil, rest.EditCurrentApplicationData{
-		Flags: &flags,
+		Flags: flags,
 	})
 	return err
 }
