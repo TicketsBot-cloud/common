@@ -496,6 +496,10 @@ func TestSinkFuncPropagatesErrors(t *testing.T) {
 // Services hold these as package-level variables assigned during startup, so a
 // read before assignment must degrade rather than panic. This is the failure mode
 // the old settable singleton had.
+//
+// A nil Client is treated the same as "GrowthBook not configured": every flag
+// defaults to enabled rather than off, since both are the same self-hosted
+// reality of having no ruleset to consult, just observed one level up.
 func TestNilReceiversAreSafe(t *testing.T) {
 	var client *Client
 	var recorder *Recorder
@@ -503,10 +507,10 @@ func TestNilReceiversAreSafe(t *testing.T) {
 	ctx := context.Background()
 
 	require.NotPanics(t, func() {
-		require.False(t, client.IsEnabled(ctx, "flag", ForGuild(1)))
+		require.True(t, client.IsEnabled(ctx, "flag", ForGuild(1)))
 		require.Equal(t, "def", client.StringValue(ctx, "flag", ForGuild(1), "def"))
 		require.Equal(t, 5, client.IntValue(ctx, "flag", ForGuild(1), 5))
-		require.Equal(t, Result{}, client.Eval(ctx, "flag", ForGuild(1)))
+		require.Equal(t, Result{On: true, Source: SourceUnconfiguredDefaultOn}, client.Eval(ctx, "flag", ForGuild(1)))
 		require.NoError(t, client.Close())
 
 		recorder.Record(ctx, exposure("exp", 1))

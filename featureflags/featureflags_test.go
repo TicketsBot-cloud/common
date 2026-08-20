@@ -92,6 +92,9 @@ func TestConfigValidate(t *testing.T) {
 		{"zero cache refresh", func(c Config) Config { c.CacheRefreshInterval = 0; return c }, true},
 		{"poll interval irrelevant while SSE on", func(c Config) Config { c.PollInterval = 0; return c }, false},
 		{"poll interval required without SSE", func(c Config) Config { c.UseSSE = false; c.PollInterval = 0; return c }, true},
+		{"only ApiHost set", func(c Config) Config { c.ApiHost = "https://gb"; return c }, true},
+		{"only ClientKey set", func(c Config) Config { c.ClientKey = "sdk-1"; return c }, true},
+		{"both ApiHost and ClientKey set", func(c Config) Config { c.ApiHost = "https://gb"; c.ClientKey = "sdk-1"; return c }, false},
 	}
 
 	for _, tt := range tests {
@@ -102,6 +105,62 @@ func TestConfigValidate(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
+		})
+	}
+}
+
+func TestConfigAttempted(t *testing.T) {
+	tests := []struct {
+		name     string
+		cfg      Config
+		expected bool
+	}{
+		{"both set", Config{ApiHost: "https://gb", ClientKey: "sdk-1"}, true},
+		{"host only", Config{ApiHost: "https://gb"}, true},
+		{"key only", Config{ClientKey: "sdk-1"}, true},
+		{"empty", Config{}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, tt.cfg.Attempted())
+		})
+	}
+}
+
+// TestNewRejectsPartialGrowthBookConfig is the regression test for the HIGH
+// finding: a config with only one of ApiHost/ClientKey set used to fall
+// through New's `!cfg.Enabled()` check exactly like a genuinely unconfigured
+// deployment, silently defaulting every 202608_FEATURE_* kill switch to on. It
+// must now be rejected as an error from New, the same as any other invalid
+// Config, and each case must also report Attempted() as true - that is the
+// exact condition dash-api's and the worker's main.go now gate their
+// NewOffline fail-closed fallback on, so this also demonstrates that gate
+// would fire for this error rather than leaving the fallback un-triggered.
+func TestNewRejectsPartialGrowthBookConfig(t *testing.T) {
+	base := Config{LoadTimeout: time.Second, PollInterval: time.Minute, CacheRefreshInterval: time.Minute}
+
+	tests := []struct {
+		name   string
+		mutate func(Config) Config
+	}{
+		{"only ApiHost set", func(c Config) Config { c.ApiHost = "https://gb"; return c }},
+		{"only ClientKey set", func(c Config) Config { c.ClientKey = "sdk-1"; return c }},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := tt.mutate(base)
+
+			client, err := New(context.Background(), cfg, testLogger(t), nil, nil)
+			require.Error(t, err)
+			require.Nil(t, client)
+
+			// The gate in main.go must route this error to NewOffline, not to a
+			// silently-open client, so it must key on Attempted (true here) rather
+			// than Enabled (false here, since the config is partial).
+			require.True(t, cfg.Attempted())
+			require.False(t, cfg.Enabled())
 		})
 	}
 }
@@ -251,9 +310,14 @@ func TestAttributesWithExtraDoesNotMutateBase(t *testing.T) {
 	require.Contains(t, second.toGrowthBook(), "c")
 }
 
-// A client with no GrowthBook configured must evaluate everything to its zero
-// value and never fail. This is the self-hosted and local-development path.
-func TestDegradedClientEvaluatesToZeroValues(t *testing.T) {
+// A client with no GrowthBook configured must evaluate every boolean flag as
+// enabled and never fail. This is the self-hosted and local-development path,
+// and is the behaviour that distinguishes "not configured" from "configured but
+// unreachable", which must still fail closed (see
+// TestFeatureFlagFailureModesDistinguishUnconfiguredFromUnreachable). A
+// multivariate flag still has no explicit value to offer, so StringValue and
+// IntValue keep returning the caller's fallback.
+func TestUnconfiguredClientDefaultsEveryFlagOn(t *testing.T) {
 	client, err := New(
 		context.Background(),
 		Config{LoadTimeout: time.Second, CacheRefreshInterval: time.Minute, UseSSE: true},
@@ -267,10 +331,139 @@ func TestDegradedClientEvaluatesToZeroValues(t *testing.T) {
 	ctx := context.Background()
 	attrs := ForGuild(1)
 
-	require.False(t, client.IsEnabled(ctx, "anything", attrs))
+	require.True(t, client.IsEnabled(ctx, "anything", attrs))
 	require.Equal(t, "fallback", client.StringValue(ctx, "anything", attrs, "fallback"))
 	require.Equal(t, 42, client.IntValue(ctx, "anything", attrs, 42))
-	require.Equal(t, Result{}, client.Eval(ctx, "anything", attrs))
+	require.Equal(t, Result{On: true, Source: SourceUnconfiguredDefaultOn}, client.Eval(ctx, "anything", attrs))
+}
+
+// TestFeatureFlagFailureModesDistinguishUnconfiguredFromUnreachable is the
+// regression test for scoping the "default every flag on" behaviour narrowly to
+// "GrowthBook is not configured". It must not bleed into any of the other ways
+// evaluation can fail to get a real answer: an unreachable backend with an empty
+// cache, or an unknown key against a healthy client, both need to keep failing
+// closed to off exactly as before, because that fail-closed behaviour is what a
+// kill switch exists to guarantee, including mid-incident on a SaaS instance
+// whose GrowthBook connection has just dropped.
+func TestFeatureFlagFailureModesDistinguishUnconfiguredFromUnreachable(t *testing.T) {
+	unreachable := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "nope", http.StatusInternalServerError)
+	}))
+	t.Cleanup(unreachable.Close)
+
+	tests := []struct {
+		name        string
+		buildClient func(t *testing.T) *Client
+		key         string
+		wantOn      bool
+		wantSource  string // empty means the test does not assert on Source
+	}{
+		{
+			name: "nil client is treated as unconfigured and defaults on",
+			buildClient: func(t *testing.T) *Client {
+				return nil
+			},
+			key:        "anything",
+			wantOn:     true,
+			wantSource: SourceUnconfiguredDefaultOn,
+		},
+		{
+			name: "empty ApiHost and ClientKey is unconfigured and defaults on",
+			buildClient: func(t *testing.T) *Client {
+				client, err := New(
+					context.Background(),
+					Config{LoadTimeout: time.Second, CacheRefreshInterval: time.Minute, UseSSE: true},
+					testLogger(t),
+					nil,
+					nil,
+				)
+				require.NoError(t, err)
+				t.Cleanup(func() { require.NoError(t, client.Close()) })
+				return client
+			},
+			key:        "anything",
+			wantOn:     true,
+			wantSource: SourceUnconfiguredDefaultOn,
+		},
+		{
+			name: "configured but unreachable at startup with an empty cache stays off",
+			buildClient: func(t *testing.T) *Client {
+				client, err := New(
+					context.Background(),
+					Config{
+						ApiHost:              unreachable.URL,
+						ClientKey:            "sdk-test",
+						UseSSE:               false,
+						PollInterval:         time.Minute,
+						LoadTimeout:          time.Second,
+						CacheRefreshInterval: time.Hour,
+					},
+					testLogger(t),
+					nil,
+					nil,
+				)
+				require.NoError(t, err)
+				t.Cleanup(func() { require.NoError(t, client.Close()) })
+				return client
+			},
+			key:    "anything",
+			wantOn: false,
+		},
+		{
+			// This is the shape the two main.go startup paths (dash-api, worker)
+			// fall back to when featureflags.New itself returns an error (a
+			// genuine misconfiguration, e.g. a bad duration) but GrowthBook was
+			// configured. It must stay fail-closed rather than joining the
+			// unconfigured-default-on path, since that deployment did intend to
+			// use GrowthBook.
+			name: "empty offline ruleset is the startup fail-closed fallback and stays off",
+			buildClient: func(t *testing.T) *Client {
+				client, err := NewOffline(context.Background(), testLogger(t), "{}", nil)
+				require.NoError(t, err)
+				t.Cleanup(func() { require.NoError(t, client.Close()) })
+				return client
+			},
+			key:    "202608_FEATURE_TICKETS",
+			wantOn: false,
+		},
+		{
+			name: "configured and populated but an unknown key stays off",
+			buildClient: func(t *testing.T) *Client {
+				client, err := NewOffline(context.Background(), testLogger(t), rolloutRuleset, nil)
+				require.NoError(t, err)
+				t.Cleanup(func() { require.NoError(t, client.Close()) })
+				return client
+			},
+			key:    "no-such-flag",
+			wantOn: false,
+		},
+		{
+			name: "configured and populated with a known key evaluates normally",
+			buildClient: func(t *testing.T) *Client {
+				client, err := NewOffline(context.Background(), testLogger(t), rolloutRuleset, nil)
+				require.NoError(t, err)
+				t.Cleanup(func() { require.NoError(t, client.Close()) })
+				return client
+			},
+			key:    "flag-all",
+			wantOn: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := tt.buildClient(t)
+			result := client.Eval(context.Background(), tt.key, ForGuild(1))
+
+			require.Equal(t, tt.wantOn, result.On)
+			if tt.wantSource != "" {
+				require.Equal(t, tt.wantSource, result.Source)
+			} else {
+				require.NotEqual(t, SourceUnconfiguredDefaultOn, result.Source,
+					"a fail-closed result must never be mistaken for an unconfigured default")
+			}
+		})
+	}
 }
 
 // Polling is the default data source because a stock self-hosted GrowthBook does

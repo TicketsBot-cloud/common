@@ -6,11 +6,22 @@
 // the SDK holds the ruleset in memory and performs no network call per call to
 // IsEnabled, which is a hard requirement for the worker's event hot path.
 //
-// The package is designed to fail open on availability rather than correctness.
-// If GrowthBook is unreachable at startup the last-known-good payload is read
-// from Redis; if that is missing too, every flag evaluates to its zero value and
-// the process still boots. A deployment with no GrowthBook configured at all
-// behaves the same way, which is what self-hosted installations get.
+// The package draws a hard line between two kinds of failure.
+//
+// GrowthBook simply not being configured (empty ApiHost/ClientKey, which is
+// what a self-hosted installation gets by default) is not a failure at all: with
+// no ruleset to consult, every flag evaluates to enabled, so a self-hosted
+// operator who never sets up GrowthBook is not silently missing shipped
+// features behind kill switches.
+//
+// GrowthBook being configured but unreachable is a real failure, and is where
+// this package fails closed instead. If GrowthBook is unreachable at startup
+// the last-known-good payload is read from Redis; if that is missing too, every
+// flag evaluates to its zero value (off) and the process still boots. An
+// unknown flag key against an otherwise-healthy client also evaluates to off.
+// This fail-closed behaviour is the entire point of a kill switch: a SaaS
+// instance whose GrowthBook connection drops mid-incident must keep treating
+// every flag it can no longer resolve as off, not fall back to on.
 package featureflags
 
 import (
@@ -60,9 +71,18 @@ type Result struct {
 	InExperiment bool
 	// VariationId is the assigned variation index when InExperiment is true.
 	VariationId int
-	// Source describes which rule produced the value, for debugging.
+	// Source describes which rule produced the value, for debugging. When On was
+	// defaulted to true because GrowthBook is not configured at all, Source is
+	// SourceUnconfiguredDefaultOn rather than a GrowthBook rule source, so a
+	// caller or log can tell "we don't actually know, we defaulted" apart from
+	// "GrowthBook told us this is genuinely on".
 	Source string
 }
+
+// SourceUnconfiguredDefaultOn is the Result.Source value used when a flag was
+// defaulted to on because GrowthBook is not configured, rather than actually
+// evaluated against a ruleset.
+const SourceUnconfiguredDefaultOn = "unconfigured-default-on"
 
 // Client evaluates flags. It is safe for concurrent use.
 type Client struct {
@@ -71,6 +91,13 @@ type Client struct {
 	gb       *gb.Client
 	cache    *payloadCache
 	recorder ExposureRecorder
+
+	// unconfigured is true when New was given no ApiHost/ClientKey. It is the
+	// only condition that flips evaluation from fail-closed (off) to
+	// default-on: gb is nil in that case, but gb being nil never happens for any
+	// other reason on a *Client returned without error, so this field exists
+	// mainly to say so at the call site rather than lean on that invariant.
+	unconfigured bool
 
 	stop     chan struct{}
 	stopOnce sync.Once
@@ -105,7 +132,8 @@ func New(
 	}
 
 	if !cfg.Enabled() {
-		logger.Warn("featureflags: GrowthBook not configured, all flags evaluate to their zero value")
+		logger.Warn("featureflags: GrowthBook not configured, every flag evaluates to enabled")
+		c.unconfigured = true
 		return c, nil
 	}
 
@@ -302,16 +330,35 @@ func (c *Client) onExperimentViewed(ctx context.Context, exp *gb.Experiment, res
 	})
 }
 
-// Eval evaluates key for attrs. It never returns an error: an unknown flag, an
-// unconfigured client or an empty ruleset all yield the zero Result, so callers
-// read as "off unless explicitly turned on".
+// Eval evaluates key for attrs. It never returns an error, but the two ways it
+// can fail to get a real answer are handled differently:
 //
-// A nil receiver is valid and evaluates to the zero Result. Services hold this as
-// a package-level variable assigned during startup, and the old implementation's
-// settable global could be read before it was set and panic. Treating nil as
-// "every flag off" removes that failure mode entirely.
+//   - GrowthBook is not configured at all (c is nil, or c was built with no
+//     ApiHost/ClientKey, the self-hosted default): every flag defaults to
+//     enabled. Result.On is true and Result.Source is
+//     SourceUnconfiguredDefaultOn, so a caller or log can tell this apart from a
+//     genuine GrowthBook "on".
+//   - GrowthBook is configured but the answer is unavailable for any other
+//     reason (unreachable at startup with nothing usable in the Redis cache, or
+//     an unknown flag key against an otherwise-healthy client): the zero Result
+//     is returned, so callers read that as "off unless explicitly turned on".
+//     This is the fail-closed behaviour a kill switch exists for, and it holds
+//     even when GrowthBook was reachable a moment ago and has since dropped out
+//     mid-incident.
+//
+// A nil receiver is valid. Services hold this as a package-level variable
+// assigned during startup, and the old implementation's settable global could be
+// read before it was set and panic. Treating nil the same as "GrowthBook not
+// configured" removes that failure mode entirely and keeps both observations of
+// the same underlying reality consistent.
 func (c *Client) Eval(ctx context.Context, key string, attrs Attributes) Result {
-	if c == nil || c.gb == nil {
+	if c == nil || c.unconfigured {
+		return Result{On: true, Source: SourceUnconfiguredDefaultOn}
+	}
+
+	if c.gb == nil {
+		// Not expected to happen outside the unconfigured branch above, but stay
+		// defensive rather than risk a nil-pointer dereference below.
 		return Result{}
 	}
 
