@@ -17,12 +17,10 @@ import (
 type Experiment string
 
 const (
-	COMPONENTS_V2_STATISTICS Experiment = "COMPONENTS_V2_STATISTICS"
-	API_BASED_FORM_INPUTS    Experiment = "API_BASED_FORM_INPUTS"
+	API_BASED_FORM_INPUTS Experiment = "API_BASED_FORM_INPUTS"
 )
 
 var List = []Experiment{
-	COMPONENTS_V2_STATISTICS,
 	API_BASED_FORM_INPUTS,
 }
 

@@ -52,3 +52,27 @@ func (c *RedisCache) DeleteCachedPermissionLevel(ctx context.Context, guildId, u
 	key := fmt.Sprintf("permissions:%d:%d", guildId, userId)
 	return c.client.Del(ctx, key).Err()
 }
+
+func (c *RedisCache) DeleteGuildPermissionCache(ctx context.Context, guildId uint64) error {
+	pattern := fmt.Sprintf("permissions:%d:*", guildId)
+	var cursor uint64
+	for {
+		keys, nextCursor, err := c.client.Scan(ctx, cursor, pattern, 100).Result()
+		if err != nil {
+			return err
+		}
+
+		if len(keys) > 0 {
+			if err := c.client.Del(ctx, keys...).Err(); err != nil {
+				return err
+			}
+		}
+
+		cursor = nextCursor
+		if cursor == 0 {
+			break
+		}
+	}
+
+	return nil
+}

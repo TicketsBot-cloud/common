@@ -12,11 +12,12 @@ require (
 	github.com/getsentry/sentry-go v0.21.0
 	github.com/go-redis/redis/v8 v8.11.3
 	github.com/google/uuid v1.6.0
+	github.com/growthbook/growthbook-golang v0.2.9
 	github.com/jackc/pgx/v4 v4.18.3
 	github.com/klauspost/compress v1.17.8
 	github.com/panjf2000/ants/v2 v2.10.0
 	github.com/sirupsen/logrus v1.9.0
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.9.0
 	go.uber.org/atomic v1.6.0
 	go.uber.org/zap v1.13.0
 	golang.org/x/sync v0.9.0
@@ -45,6 +46,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/tatsuworks/czlib v0.0.0-20190916144400-8a51758ea0d9 // indirect
+	github.com/tmaxmax/go-sse v0.10.0 // indirect
 	go.uber.org/multierr v1.5.0 // indirect
 	golang.org/x/crypto v0.28.0 // indirect
 	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f // indirect
