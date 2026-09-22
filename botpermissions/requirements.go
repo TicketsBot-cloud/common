@@ -58,6 +58,25 @@ var NotifChannelRequired = []permission.Permission{
 	permission.ManageRoles,
 }
 
+// GuildRequired are guild-level permissions, including the thread permissions /notes needs.
+var GuildRequired = func() []permission.Permission {
+	perms := []permission.Permission{
+		permission.ManageWebhooks,
+		permission.PinMessages,
+		permission.ManageRoles,
+		permission.ManageChannels,
+		permission.CreatePrivateThreads,
+		permission.SendMessagesInThreads,
+	}
+	return append(perms, StandardPermissions...)
+}()
+
+// PendingCategoryRequired covers the status update, which only reparents an existing channel.
+var PendingCategoryRequired = []permission.Permission{
+	permission.ViewChannel,
+	permission.ManageChannels,
+}
+
 // TranscriptChannelRequired are the permissions the bot needs on the transcript channel (any mode).
 var TranscriptChannelRequired = []permission.Permission{
 	permission.ViewChannel,
