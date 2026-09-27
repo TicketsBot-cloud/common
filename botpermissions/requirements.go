@@ -47,15 +47,39 @@ var ChannelModeRequired = func() []permission.Permission {
 	return perms
 }()
 
-// NotifChannelRequired are the permissions the bot needs on the notification channel (thread mode only).
-// It is MinimalPermissions with EmbedLinks and AttachFiles appended.
-var NotifChannelRequired = func() []permission.Permission {
-	perms := make([]permission.Permission, 0, len(MinimalPermissions)+2)
-	perms = append(perms, MinimalPermissions...)
-	perms = append(perms, permission.EmbedLinks, permission.AttachFiles)
-	return perms
+// NotifChannelRequired are the permissions the bot needs on the notification channel.
+// ManageRoles is needed because the add/remove support/admin commands write an overwrite here.
+var NotifChannelRequired = []permission.Permission{
+	permission.ViewChannel,
+	permission.SendMessages,
+	permission.EmbedLinks,
+	permission.ReadMessageHistory,
+	permission.UseApplicationCommands,
+	permission.ManageRoles,
+}
+
+// GuildRequired are guild-level permissions, including the thread permissions /notes needs.
+var GuildRequired = func() []permission.Permission {
+	perms := []permission.Permission{
+		permission.ManageWebhooks,
+		permission.PinMessages,
+		permission.ManageRoles,
+		permission.ManageChannels,
+		permission.CreatePrivateThreads,
+		permission.SendMessagesInThreads,
+	}
+	return append(perms, StandardPermissions...)
 }()
 
+// PendingCategoryRequired covers the status update, which only reparents an existing channel.
+var PendingCategoryRequired = []permission.Permission{
+	permission.ViewChannel,
+	permission.ManageChannels,
+}
+
 // TranscriptChannelRequired are the permissions the bot needs on the transcript channel (any mode).
-// Equivalent to MinimalPermissions.
-var TranscriptChannelRequired = MinimalPermissions
+var TranscriptChannelRequired = []permission.Permission{
+	permission.ViewChannel,
+	permission.SendMessages,
+	permission.EmbedLinks,
+}
