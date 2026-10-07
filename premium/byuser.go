@@ -33,9 +33,9 @@ func (p *PremiumLookupClient) GetTierByUserWithSource(ctx context.Context, userI
 	}
 
 	defer func() {
-		// cache result
-		if _err == nil {
-			go p.SetCachedTier(ctx, userId, CachedTier{
+		// a query cut short by ctx returns no rows and no error
+		if _err == nil && ctx.Err() == nil {
+			go p.cacheTier(userId, CachedTier{
 				Tier:   int8(_tier),
 				Source: _src,
 			})

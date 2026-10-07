@@ -16,6 +16,7 @@ type CachedTier struct {
 }
 
 const timeout = time.Minute * 5
+const cacheWriteTimeout = 3 * time.Second
 
 // Functions can take a user ID or guild ID
 
@@ -48,6 +49,13 @@ func (p *PremiumLookupClient) SetCachedTier(ctx context.Context, id uint64, data
 
 		return p.redis.Set(ctx, key, string(marshalled), timeout).Err()
 	})
+}
+
+func (p *PremiumLookupClient) cacheTier(id uint64, data CachedTier) error {
+	ctx, cancel := context.WithTimeout(context.Background(), cacheWriteTimeout)
+	defer cancel()
+
+	return p.SetCachedTier(ctx, id, data)
 }
 
 func (p *PremiumLookupClient) DeleteCachedTier(ctx context.Context, id uint64) error {
