@@ -16,10 +16,10 @@ func (p *PremiumLookupClient) GetTierByGuild(ctx context.Context, guild guild.Gu
 	_src = ""
 
 	defer func() {
-		// cache result
-		if _err == nil {
+		// a query cut short by ctx returns no rows and no error
+		if _err == nil && ctx.Err() == nil {
 			go func() {
-				err := p.SetCachedTier(ctx, guild.Id, CachedTier{
+				err := p.cacheTier(guild.Id, CachedTier{
 					Tier:   int8(_tier),
 					Source: _src,
 				})
