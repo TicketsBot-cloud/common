@@ -10,7 +10,6 @@ import (
 )
 
 type Interaction struct {
-	BotToken        string                      `json:"bot_token"`
 	BotId           uint64                      `json:"bot_id"`
 	IsWhitelabel    bool                        `json:"is_whitelabel"`
 	InteractionType interaction.InteractionType `json:"interaction_type"`
