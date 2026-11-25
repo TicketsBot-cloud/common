@@ -11,7 +11,6 @@ import (
 const channel = "tickets:tokenchange"
 
 type TokenChangeData struct {
-	Token string `json:"token"`
 	NewId uint64 `json:"new_id"`
 	OldId uint64 `json:"old_id"`
 }
