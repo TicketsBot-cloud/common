@@ -4,7 +4,7 @@ go 1.22.0
 
 toolchain go1.24.2
 
-//replace github.com/TicketsBot-cloud/database => ../database
+replace github.com/TicketsBot-cloud/database => ../database
 
 require (
 	github.com/TicketsBot-cloud/database v0.0.0-20251018211325-3d2b9b4ad642
@@ -19,7 +19,7 @@ require (
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/atomic v1.6.0
-	go.uber.org/zap v1.13.0
+	go.uber.org/zap v1.27.1
 	golang.org/x/sync v0.9.0
 )
 
@@ -47,13 +47,12 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/tatsuworks/czlib v0.0.0-20190916144400-8a51758ea0d9 // indirect
 	github.com/tmaxmax/go-sse v0.10.0 // indirect
-	go.uber.org/multierr v1.5.0 // indirect
-	golang.org/x/crypto v0.28.0 // indirect
+	go.uber.org/multierr v1.10.0 // indirect
+	golang.org/x/crypto v0.29.0 // indirect
 	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f // indirect
-	golang.org/x/lint v0.0.0-20190930215403-16217165b5de // indirect
+	golang.org/x/net v0.31.0 // indirect
 	golang.org/x/sys v0.27.0 // indirect
-	golang.org/x/text v0.19.0 // indirect
-	golang.org/x/tools v0.27.0 // indirect
+	golang.org/x/text v0.20.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	nhooyr.io/websocket v1.8.4 // indirect
 )
